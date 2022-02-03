@@ -8,6 +8,7 @@ on:
 env:
   AWS_REGION: ap-northeast-2
   ECR_REPOSITORY: github-actions
+  LAMBDA_FUNCTION: ecr-test
 
 jobs:
   deploy:
@@ -30,7 +31,7 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, tag, and push image to Amazon ECR
+      - name: Build, tag, and push image to Amazon ECR and then update image url of lambda layer
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -39,17 +40,8 @@ jobs:
           # Build a docker container and
           # push it to ECR so that it can
           # be deployed to ECS.
-          echo $ECR_REGISTRY
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-          aws lambda update-function-code --function-name ecr-test --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
-      # - name: Update image url in lambda
-      #   env:
-      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      #     IMAGE_TAG: ${{ github.sha }}
-      #   run: |
-      #     echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-      #     aws lambda update-function-code --function-name ecr-test --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "update lambda image url to $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          aws lambda update-function-code --function-name $LAMBDA_FUNCTION --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
