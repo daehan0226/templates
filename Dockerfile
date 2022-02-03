@@ -1,2 +1,1 @@
-FROM busybox
-CMD echo "Hello World!"
+FROM python:3.8-alpine
